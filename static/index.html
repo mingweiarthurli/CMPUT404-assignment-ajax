@@ -22,16 +22,19 @@
     "/>
     <script src="json2.js"></script>
   </head> 
-  <body bgcolor="black" height="100%" width="100%"> 
+  <body bgcolor="#FCF5ED" height="100%" width="100%" style="margin: 0;"> 
+    <!-- <img id="bg" src="grid_paper.jpg" style="display: disable;" οndragstart="return false;"> -->
     <canvas id="c" width="100%" height="100%" style="-webkit-tap-highlight-color: transparent;"></canvas> 
     <script>
 var canvas = document.getElementById('c');
 var host = window.location.host;
 var context = canvas.getContext("2d");
-var W = canvas.width  = window.innerWidth-6;
-var H = canvas.height = window.innerHeight-50;
+var W = canvas.width  = window.innerWidth;
+var H = canvas.height = window.innerHeight;
 
 
+// code reference:
+// Hazel Campbell; https://github.com/uofa-cmput404/cmput404-slides/blob/master/examples/ObserverExampleAJAX/static/observer.js
 function sendJSONXMLHTTPRequest(url, objects, callback) {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function () {
@@ -40,6 +43,9 @@ function sendJSONXMLHTTPRequest(url, objects, callback) {
                 if (xhr.status==200) {
                     //XXX: parse some JSON from the request!
                     //XXX: Pass the data to the callback!
+                    if (typeof callback === "function"){ // determine if the callback exists
+                        callback(xhr.responseText);
+                    }
                 }
             } 
             catch(e) {
@@ -50,6 +56,11 @@ function sendJSONXMLHTTPRequest(url, objects, callback) {
     //XXX: POST to a URL
     //XXX: set the mimetype and the accept headers!
     // Remember to use application/json !
+    xhr.open( objects["method"] || 'GET', url);
+    xhr.overrideMimeType("application/json");
+    xhr.setRequestHeader('Accept', "application/json");
+    // finally send it
+    xhr.send(objects["body"] || null);
 }
 
 
@@ -59,7 +70,7 @@ world = {};
 function drawCircle(context,entity) {
     with(context) {
         beginPath();              
-        lineWidth = 3;
+        lineWidth = 2;
         var x = entity["x"];
         var y = entity["y"];
         //moveTo(x,y);
@@ -82,10 +93,19 @@ function prepEntity(entity) {
 
 function clearFrame() {
     with(context) {
-	moveTo(0,0);
-	fillStyle = "#000";
-	fillRect(0,0,W,H);
+    // let img = document.getElementById("bg");
+    // let pat = createPattern(img, "repeat");
+    // fillStyle = pat;
+    // fillRect(0,0,W,H);
+    moveTo(0,0);
+	fillStyle = "#FCF5ED";
+    fillRect(0,0,W,H);
     }
+    // let url = "http://"+host+"/clear";
+    // let objs = {
+    //     "method": "GET",
+    // }
+    // sendJSONXMLHTTPRequest(url, objs, null);
 
 }
 
@@ -136,9 +156,15 @@ function getPosition(e) {
 
 function addEntity(entity, data) {
     world[entity] = data;
-    drawNextFrame(); // (but should we?)
+    // drawNextFrame(); // (but should we?)
+    // console.log(world)
     //XXX: Send a XHTML Request that updates the entity you just  modified!
-
+    let url = "http://"+host+"/entity/"+entity;
+    let objs = {
+        "method": "PUT",
+        "body": JSON.stringify(data),
+    }
+    sendJSONXMLHTTPRequest(url, objs, null);
 }
 
 var counter = 0;
@@ -247,21 +273,38 @@ mouse = (function() {
 // Add the application specific mouse listeners!
 //XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'blue'});
+    addEntityWithoutName({'x':x,'y':y,'colour':'gold'});
 });
 
 mouse.mouseuppers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'red'});
+    addEntityWithoutName({'x':x,'y':y,'colour':'crimson'});
 });
 
 mouse.mousedraggers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'green',
+    addEntityWithoutName({'x':x,'y':y,'colour':'deepskyblue',
                           'radius':10});
 });
 
+// code reference:
+// Hazel Campbell; https://github.com/uofa-cmput404/cmput404-slides/blob/master/examples/ObserverExampleAJAX/static/observer.js
+function updateWorld(text) {
+    if (text) {
+        var objs = JSON.parse(text);
+        for (var key in objs) {
+            world[key] = objs[key];
+        }
+        // console.log(world);
+    }
+}
 
 function update() {
     //XXX: TODO Get the world from the webservice using a XMLHTTPRequest
+    let url = "http://"+host+"/world";
+    let objs = {
+        "method": "GET",
+    }
+    sendJSONXMLHTTPRequest(url, objs, updateWorld);
+    drawNextFrame();
     drawFrame();
 }
 
